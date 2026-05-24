@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 function toSnake(data: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
@@ -51,16 +50,42 @@ export async function POST(request: Request) {
       hasCompetitorInfo: body.hasCompetitorInfo ?? false,
     });
 
-    console.log("SUPABASE_URL exists:", !!process.env.SUPABASE_URL);
-    console.log("SUPABASE_SERVICE_ROLE_KEY exists:", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    console.log("SUPABASE_URL exists:", !!supabaseUrl);
+    console.log("SUPABASE_SERVICE_ROLE_KEY exists:", !!serviceRoleKey);
     console.log("Supabase insert data:", row);
 
-    const { error } = await getSupabaseAdmin().from("feedbacks").insert(row);
-    if (error) {
-      console.log("Supabase insert error:", error);
-      console.log("Supabase insert error.message:", error.message);
-      console.log("Supabase insert error.details:", (error as any).details);
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.log("环境变量缺失");
+      return NextResponse.json(
+        { success: false, error: "服务器配置错误：缺少数据库凭据" },
+        { status: 500 }
+      );
+    }
+
+    // 直接使用 REST API，确保 service_role key 被正确传递
+    const res = await fetch(`${supabaseUrl}/rest/v1/feedbacks`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${serviceRoleKey}`,
+        apikey: serviceRoleKey,
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify(row),
+    });
+
+    console.log("Supabase REST API status:", res.status);
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.log("Supabase REST API error:", res.status, errText);
+      return NextResponse.json(
+        { success: false, error: `数据库写入失败 (${res.status}): ${errText}` },
+        { status: 500 }
+      );
     }
 
     console.log("Supabase insert 成功");
@@ -74,17 +99,35 @@ export async function POST(request: Request) {
 
 export async function GET() {
   try {
-    const { data, error } = await getSupabaseAdmin()
-      .from("feedbacks")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(500);
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    if (!supabaseUrl || !serviceRoleKey) {
+      return NextResponse.json(
+        { success: false, error: "服务器配置错误" },
+        { status: 500 }
+      );
     }
 
-    const feedbacks = (data || []).map((row) => toCamel(row));
+    const res = await fetch(
+      `${supabaseUrl}/rest/v1/feedbacks?order=created_at.desc&limit=500`,
+      {
+        headers: {
+          Authorization: `Bearer ${serviceRoleKey}`,
+          apikey: serviceRoleKey,
+        },
+      }
+    );
+
+    if (!res.ok) {
+      return NextResponse.json(
+        { success: false, error: `查询失败 (${res.status})` },
+        { status: 500 }
+      );
+    }
+
+    const data = await res.json();
+    const feedbacks = (data || []).map((row: Record<string, unknown>) => toCamel(row));
 
     return NextResponse.json({ success: true, data: feedbacks });
   } catch (e: unknown) {
