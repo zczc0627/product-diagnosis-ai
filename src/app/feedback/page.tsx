@@ -4,8 +4,19 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { Section, SectionHeader } from "@/components/Section";
 import { Card } from "@/components/Card";
-import { loadFeedbacks } from "@/lib/store";
-import type { FeedbackEntry } from "@/lib/store";
+interface FeedbackEntry {
+  id: string;
+  productName: string;
+  category: string;
+  platform: string;
+  score: number;
+  helpfulness: string;
+  pricingAcceptance: string;
+  contact: string;
+  createdAt: string;
+  unlocked: boolean;
+  hasCompetitorInfo: boolean;
+}
 
 const PLATFORM_LABELS: Record<string, string> = {
   douyin: "抖音",
@@ -61,13 +72,23 @@ function exportCSV(feedbacks: FeedbackEntry[]) {
 export default function FeedbackPage() {
   const [feedbacks, setFeedbacks] = useState<FeedbackEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState("");
   const [platformFilter, setPlatformFilter] = useState("");
   const [pricingFilter, setPricingFilter] = useState("");
   const [helpfulnessFilter, setHelpfulnessFilter] = useState("");
 
   useEffect(() => {
-    setFeedbacks(loadFeedbacks());
-    setLoaded(true);
+    fetch("/api/feedback")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success) {
+          setFeedbacks(json.data);
+        } else {
+          setError(json.error || "加载失败");
+        }
+      })
+      .catch(() => setError("加载失败，请稍后重试。"))
+      .finally(() => setLoaded(true));
   }, []);
 
   const filtered = useMemo(() => {
@@ -110,12 +131,28 @@ export default function FeedbackPage() {
     );
   }
 
+  if (error && feedbacks.length === 0) {
+    return (
+      <Section>
+        <div className="mx-auto max-w-md text-center py-20">
+          <p className="text-sm text-red-500 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="text-sm text-[var(--accent)] hover:underline"
+          >
+            重新加载
+          </button>
+        </div>
+      </Section>
+    );
+  }
+
   return (
     <Section>
       <SectionHeader
         label="反馈记录"
         title="用户反馈数据"
-        description="查看用户对诊断方案的反馈，了解定价接受度和满意度。数据存储在浏览器本地。"
+        description="查看用户对诊断方案的反馈，了解定价接受度和满意度。数据存储在 Supabase 数据库，所有用户提交的反馈都会汇总到这里。"
       />
 
       <div className="mx-auto max-w-4xl space-y-6">

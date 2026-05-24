@@ -6,8 +6,7 @@ import { Section, SectionHeader } from "@/components/Section";
 import { Card } from "@/components/Card";
 import { ScoreRing } from "@/components/ScoreRing";
 import { ScoreBar } from "@/components/ScoreBar";
-import { loadFormData, saveHistoryItem, saveFeedback } from "@/lib/store";
-import type { FeedbackEntry } from "@/lib/store";
+import { loadFormData, saveHistoryItem } from "@/lib/store";
 import { generateDiagnosis } from "@/lib/generate";
 import type { DiagnosticResult, ProductInput } from "@/lib/types";
 
@@ -37,6 +36,7 @@ export default function FullResultsPage() {
   const [priceAccept, setPriceAccept] = useState<string | null>(null);
   const [contact, setContact] = useState("");
   const [feedbackSent, setFeedbackSent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const data = loadFormData();
@@ -59,28 +59,41 @@ export default function FullResultsPage() {
     });
   }, []);
 
-  const handleFeedbackSubmit = () => {
+  const handleFeedbackSubmit = async () => {
     if (!result || !formData) return;
     if (!feedbackHelpful || !priceAccept) {
       alert("请先选择反馈选项（方案评价和价格接受度）");
       return;
     }
-    const entry: FeedbackEntry = {
-      id: crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-      productName: result.productName,
-      category: formData.category || "",
-      platform: result.platform,
-      score: result.score.overall,
-      helpfulness: feedbackHelpful,
-      pricingAcceptance: priceAccept,
-      contact,
-      createdAt: new Date().toISOString(),
-      unlocked: true,
-      hasCompetitorInfo: hasCompetitor,
-    };
-    saveFeedback(entry);
-    localStorage.setItem("diagnosis_price_survey_final", priceAccept);
-    setFeedbackSent(true);
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productName: result.productName,
+          category: formData.category || "",
+          platform: result.platform,
+          score: result.score.overall,
+          helpfulness: feedbackHelpful,
+          pricingAcceptance: priceAccept,
+          contact,
+          unlocked: true,
+          hasCompetitorInfo: hasCompetitor,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        localStorage.setItem("diagnosis_price_survey_final", priceAccept);
+        setFeedbackSent(true);
+      } else {
+        alert(json.error || "反馈提交失败，请稍后重试。");
+      }
+    } catch {
+      alert("反馈提交失败，请稍后重试。");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (notFound) {
@@ -421,8 +434,8 @@ export default function FullResultsPage() {
               <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
                 <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="text-emerald-500"><path d="M3 8l3 3 7-7"/></svg>
               </div>
-              <p className="text-sm font-medium">感谢你的反馈！</p>
-              <p className="mt-1 text-xs text-[var(--text-secondary)]">我们会根据反馈持续优化产品。</p>
+              <p className="text-sm font-medium">反馈已提交，感谢你的参与。</p>
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">后续 V0 内测优惠会优先通知你。</p>
             </div>
           ) : (
             <>
@@ -486,9 +499,10 @@ export default function FullResultsPage() {
                   />
                   <button
                     onClick={handleFeedbackSubmit}
-                    className="rounded-lg bg-[var(--accent)] px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-[var(--accent-dark)]"
+                    disabled={submitting}
+                    className="rounded-lg bg-[var(--accent)] px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-[var(--accent-dark)] disabled:opacity-50"
                   >
-                    提交反馈
+                    {submitting ? "提交中..." : "提交反馈"}
                   </button>
                 </div>
                 <p className="mt-2 text-[10px] text-[var(--text-muted)]">
