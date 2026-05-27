@@ -1,11 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Section, SectionHeader } from "@/components/Section";
 import { Card } from "@/components/Card";
 import { saveFormData, saveHistoryItem } from "@/lib/store";
 import type { AIDiagnoseResponse } from "@/lib/aiTypes";
+
+const ANALYSIS_STAGES = [
+  "正在读取商品标题和卖点信息…",
+  "正在分析标题吸引力和点击潜力…",
+  "正在诊断卖点清晰度和购买理由…",
+  "正在评估主图视觉表达和点击力…",
+  "正在检查用户购买欲望触发点…",
+  "正在对比品类差异化优势…",
+  "正在分析买家顾虑和信任障碍…",
+  "正在生成针对性优化建议…",
+];
 
 const CATEGORIES = [
   "美妆个护", "服饰鞋包", "家居日用", "厨房小家电", "数码3C",
@@ -85,6 +96,9 @@ export default function DiagnosePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [rateLimited, setRateLimited] = useState(false);
+  const [progressPercent, setProgressPercent] = useState(0);
+  const [stageIndex, setStageIndex] = useState(0);
+  const submitRef = useRef(false);
 
   const update = (field: keyof FormData, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -96,6 +110,30 @@ export default function DiagnosePage() {
     form.category &&
     form.currentTitle.trim() &&
     form.currentSellingPoints.trim();
+
+  // Animate progress bar and stage messages during submitting
+  useEffect(() => {
+    if (!submitting) return;
+    submitRef.current = true;
+    setProgressPercent(0);
+    setStageIndex(0);
+
+    const progressInterval = setInterval(() => {
+      setProgressPercent((prev) => {
+        if (prev >= 90) return prev; // cap at 90% until API returns
+        return prev + Math.random() * 8 + 2; // 2-10% per tick
+      });
+    }, 600);
+
+    const stageInterval = setInterval(() => {
+      setStageIndex((prev) => (prev + 1) % ANALYSIS_STAGES.length);
+    }, 2500);
+
+    return () => {
+      clearInterval(progressInterval);
+      clearInterval(stageInterval);
+    };
+  }, [submitting]);
 
   const handleSubmit = async () => {
     if (!canSubmit || submitting) return;
@@ -175,6 +213,11 @@ export default function DiagnosePage() {
 
       // Rate limit
       incrementRateLimit();
+
+      // Complete progress bar
+      setProgressPercent(100);
+      setStageIndex(ANALYSIS_STAGES.length - 1);
+      await new Promise((r) => setTimeout(r, 400));
 
       // Navigate to results
       router.push("/results/free");
@@ -366,25 +409,39 @@ export default function DiagnosePage() {
               </div>
             )}
 
-            {/* Submit */}
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={!canSubmit || submitting}
-              className="w-full rounded-xl bg-[var(--accent)] px-6 py-3.5 text-sm font-semibold text-white transition-all hover:bg-[var(--accent-dark)] disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {submitting ? (
-                <span className="inline-flex items-center gap-2">
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  AI 正在分析标题吸引力、卖点清晰度和下单理由…
-                </span>
-              ) : (
-                "开始 AI 诊断"
-              )}
-            </button>
+            {/* Submit or Progress */}
+            {submitting ? (
+              <div className="space-y-4">
+                {/* Stage message */}
+                <div className="text-center">
+                  <p className="text-sm font-medium text-[var(--accent)] animate-pulse-glow">
+                    {ANALYSIS_STAGES[stageIndex]}
+                  </p>
+                </div>
+
+                {/* Progress bar */}
+                <div className="w-full">
+                  <div className="h-2 w-full rounded-full bg-[var(--border)] overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-[var(--accent)] via-[var(--accent-light)] to-[var(--accent)] transition-all duration-500 ease-out"
+                      style={{ width: `${Math.min(progressPercent, 100)}%` }}
+                    />
+                  </div>
+                  <p className="mt-1.5 text-center text-[11px] text-[var(--text-muted)]">
+                    {Math.round(Math.min(progressPercent, 100))}%
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={!canSubmit}
+                className="w-full rounded-xl bg-[var(--accent)] px-6 py-3.5 text-sm font-semibold text-white transition-all hover:bg-[var(--accent-dark)] disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                开始 AI 诊断
+              </button>
+            )}
 
             <p className="text-center text-[11px] text-[var(--text-muted)]">
               免费诊断，无需注册。完整优化方案 V1 内测价 9.9 元。
