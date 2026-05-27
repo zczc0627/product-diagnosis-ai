@@ -5,27 +5,14 @@ import Link from "next/link";
 import { Section, SectionHeader } from "@/components/Section";
 import { Card } from "@/components/Card";
 import { loadHistory } from "@/lib/store";
-import { mockHistoryItems } from "@/data/mock";
-
-interface HistoryItem {
-  id: string;
-  productName: string;
-  platform: string;
-  score: number;
-  date: string;
-  isCompleted: boolean;
-}
+import type { HistoryEntry } from "@/lib/store";
 
 export default function HistoryPage() {
-  const [items, setItems] = useState<HistoryItem[]>([]);
+  const [items, setItems] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = loadHistory();
-    // Merge stored items with mock items (stored first, then mock for demo)
-    const seen = new Set(stored.map((s) => s.id));
-    const merged = [...stored, ...mockHistoryItems.filter((m) => !seen.has(m.id))];
-    setItems(merged);
+    setItems(loadHistory());
     setLoading(false);
   }, []);
 
@@ -44,7 +31,7 @@ export default function HistoryPage() {
       <SectionHeader
         label="历史记录"
         title="诊断记录"
-        description="查看你过往的商品诊断结果。"
+        description="查看你过往的 AI 诊断结果，点击可重新查看报告。"
       />
 
       <div className="mx-auto max-w-3xl">
@@ -68,18 +55,27 @@ export default function HistoryPage() {
                 hover
                 className="flex items-center justify-between"
               >
-                <div className="flex items-center gap-4 min-w-0">
+                <div className="flex items-center gap-4 min-w-0 flex-1">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)]/10 text-sm font-bold text-[var(--accent)]">
-                    {item.platform.slice(0, 2)}
+                    {item.platform ? item.platform.slice(0, 2) : "?"}
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold truncate">
                       {item.productName}
                     </p>
-                    <p className="text-xs text-[var(--text-muted)]">
+                    {item.summary ? (
+                      <p className="text-xs text-[var(--text-muted)] truncate">
+                        {item.summary}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {item.platform} · {item.date}
+                      </p>
+                    )}
+                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
                       {item.platform} · {item.date}
                       {!item.isCompleted && (
-                        <span className="ml-2 text-amber-500">未完成</span>
+                        <span className="ml-2 text-amber-500">未解锁</span>
                       )}
                     </p>
                   </div>

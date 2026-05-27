@@ -8,50 +8,58 @@ import { ScoreRing } from "@/components/ScoreRing";
 import { ScoreBar } from "@/components/ScoreBar";
 import { PaywallModal } from "@/components/PaywallModal";
 import { loadFormData } from "@/lib/store";
-import { generateDiagnosis } from "@/lib/generate";
-import type { DiagnosticResult } from "@/lib/types";
+import type { AIDiagnoseResponse } from "@/lib/aiTypes";
 
-const pricingPlans = [
-  {
-    name: "免费诊断",
-    price: "0",
-    description: "了解你的商品页问题在哪",
-    features: ["综合评分", "5维度评分", "3个核心问题", "1条优化建议"],
-    current: true,
-  },
-  {
-    name: "单商品完整优化",
-    price: "9.9",
-    description: "一个商品的全套优化方案",
-    features: ["3版优化标题", "5条核心卖点", "5张主图方案", "详情页结构", "用户顾虑FAQ", "差异化方向"],
-    highlighted: true,
-    current: false,
-  },
-  {
-    name: "早鸟5次包",
-    price: "39",
-    description: "适合多商品商家",
-    features: ["5个商品完整优化", "包含单商品全套内容", "优先体验新功能", "早鸟专属优惠"],
-    current: false,
-  },
-];
+const DIMENSION_LABELS: Record<string, string> = {
+  titleAttraction: "标题吸引力",
+  sellingPointClarity: "卖点清晰度",
+  mainImageClickPower: "主图点击力",
+  purchaseDesire: "购买欲望",
+  differentiation: "差异化程度",
+  trustAndObjectionHandling: "信任与顾虑",
+};
+
+const CONVERSION_LEVEL_COLORS: Record<string, string> = {
+  "高": "text-emerald-500",
+  "中": "text-amber-500",
+  "低": "text-red-500",
+};
 
 export default function FreeResultsPage() {
-  const [result, setResult] = useState<DiagnosticResult | null>(null);
+  const [data, setData] = useState<AIDiagnoseResponse | null>(null);
+  const [formData, setFormData] = useState<ReturnType<typeof loadFormData>>(null);
   const [notFound, setNotFound] = useState(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const formData = loadFormData();
-    if (!formData) {
+    const fd = loadFormData();
+    if (!fd) {
       setNotFound(true);
+      setLoading(false);
       return;
     }
-    const diag = generateDiagnosis(formData);
-    setResult(diag);
+    setFormData(fd);
+    try {
+      const raw = localStorage.getItem("diagnosis_ai_result");
+      if (raw) {
+        setData(JSON.parse(raw));
+      }
+    } catch { /* use fallback */ }
+    setLoading(false);
   }, []);
 
-  if (notFound) {
+  if (loading) {
+    return (
+      <Section>
+        <div className="mx-auto max-w-md text-center py-20">
+          <p className="text-sm text-[var(--text-muted)]">加载中...</p>
+        </div>
+      </Section>
+    );
+  }
+
+  if (notFound || !formData) {
     return (
       <Section>
         <SectionHeader
@@ -71,228 +79,158 @@ export default function FreeResultsPage() {
     );
   }
 
-  if (!result) {
+  // Fallback: if no AI result, show error with link back
+  if (!data) {
     return (
       <Section>
-        <div className="mx-auto max-w-md text-center py-20">
-          <p className="text-sm text-[var(--text-muted)]">加载中...</p>
+        <SectionHeader
+          label="诊断结果未生成"
+          title="请重新提交商品信息"
+          description="诊断数据可能已过期，请重新诊断。"
+        />
+        <div className="mx-auto max-w-md text-center">
+          <Link
+            href="/diagnose"
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white"
+          >
+            重新诊断
+          </Link>
         </div>
       </Section>
     );
   }
 
-  const { productName, platform, score, issues, originalTitle, freeOptimizations, fullResult } = result;
+  const { overallScore, conversionLevel, summary, scores, freeProblems, freeSuggestion, paidPreview } = data;
+  const productName = formData.productName || formData.currentTitle.slice(0, 20);
 
   return (
     <Section>
       <SectionHeader
         label="免费诊断结果"
-        title={`${productName} · ${platform}`}
+        title={`${productName} · ${formData.platform || ""}`}
         description="以下是 AI 对你商品页的免费诊断摘要。解锁付费方案获取完整优化。"
       />
 
       <div className="mx-auto max-w-3xl space-y-6">
         {/* Score Overview */}
-        <Card className="p-8">
-          <h3 className="text-sm font-semibold mb-6">综合评分</h3>
+        <Card className="p-6 sm:p-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-            <ScoreRing score={score.overall} size="lg" />
-            <div className="flex-1 space-y-3 w-full">
-              <ScoreBar label="标题吸引力" score={score.titleAttractiveness} />
-              <ScoreBar label="卖点清晰度" score={score.clarityOfSellingPoints} />
-              <ScoreBar label="主图点击力" score={score.mainImageClickability} />
-              <ScoreBar label="用户购买欲" score={score.purchaseDesire} />
-              <ScoreBar label="差异化程度" score={score.differentiation} />
+            <div className="text-center shrink-0">
+              <ScoreRing score={overallScore} size="lg" />
+              <p className={`mt-2 text-xs font-semibold ${CONVERSION_LEVEL_COLORS[conversionLevel] || "text-[var(--text-muted)]"}`}>
+                转化风险：{conversionLevel}
+              </p>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold mb-3">AI 诊断总结</p>
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{summary}</p>
             </div>
           </div>
         </Card>
 
-        {/* Issues — only show top 3 */}
-        <Card className="p-8">
+        {/* 6 Dimension Scores */}
+        <Card className="p-6 sm:p-8">
+          <h3 className="text-sm font-semibold mb-4">六维度转化力评分</h3>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {Object.entries(scores).map(([key, value]) => (
+              <ScoreBar
+                key={key}
+                label={DIMENSION_LABELS[key] || key}
+                score={value as number}
+              />
+            ))}
+          </div>
+        </Card>
+
+        {/* Free Problems (3 items) */}
+        <Card className="p-6 sm:p-8">
           <h3 className="text-sm font-semibold mb-4">
-            发现 {issues.length} 个问题（展示前3个）
+            发现 {freeProblems.length} 个核心问题
           </h3>
           <div className="space-y-3">
-            {issues.slice(0, 3).map((issue) => (
+            {freeProblems.map((problem, i) => (
               <div
-                key={issue.id}
-                className={`flex items-start gap-3 rounded-lg p-4 ${
-                  issue.severity === "critical"
-                    ? "bg-red-50 dark:bg-red-950/20"
-                    : issue.severity === "warning"
-                      ? "bg-amber-50 dark:bg-amber-950/20"
-                      : "bg-blue-50 dark:bg-blue-950/20"
-                }`}
+                key={i}
+                className="flex items-start gap-3 rounded-lg bg-red-50 dark:bg-red-950/20 p-4"
               >
-                <span
-                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
-                    issue.severity === "critical"
-                      ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
-                      : issue.severity === "warning"
-                        ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400"
-                        : "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-                  }`}
-                >
-                  {issue.severity === "critical" ? "!" : issue.severity === "warning" ? "~" : "i"}
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30 text-[11px] font-bold text-red-600 dark:text-red-400">
+                  {i + 1}
                 </span>
                 <div>
-                  <p className="text-sm font-semibold">{issue.title}</p>
+                  <p className="text-sm font-semibold">{problem.title}</p>
                   <p className="mt-1 text-sm text-[var(--text-secondary)] leading-relaxed">
-                    {issue.description}
+                    {problem.description}
+                  </p>
+                  <p className="mt-1.5 text-xs text-red-500 dark:text-red-400 font-medium">
+                    影响：{problem.impact}
                   </p>
                 </div>
               </div>
             ))}
           </div>
-          {issues.length > 3 && (
-            <p className="mt-3 text-xs text-[var(--text-muted)]">
-              还有 {issues.length - 3} 个问题待解锁后查看
-            </p>
-          )}
         </Card>
 
-        {/* Partial Optimization — only 1 tip */}
-        <Card className="p-8">
-          <h3 className="text-sm font-semibold mb-2">优化建议预览（仅展示1条）</h3>
-          <p className="text-sm text-[var(--text-secondary)] mb-4">
-            完整版包含 3 个标题版本 + 5 条卖点 + 5 张主图方案 + 详情页结构。
+        {/* Free Suggestion */}
+        <Card className="p-6 sm:p-8 border-emerald-200 dark:border-emerald-900/30">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="flex h-5 w-5 items-center justify-center rounded-md bg-emerald-100 dark:bg-emerald-900/30 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+              ✓
+            </span>
+            <h3 className="text-sm font-semibold">免费优化建议</h3>
+          </div>
+          <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{freeSuggestion}</p>
+        </Card>
+
+        {/* Paid Preview — Unlock CTA */}
+        <Card className="p-6 sm:p-8 border-[var(--accent)] ring-1 ring-[var(--accent)]/20"
+        >
+          <div className="text-center mb-5">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)]/10 px-3 py-1 text-[11px] font-medium text-[var(--accent)]">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M5 6a3 3 0 116 0v1h1a1 1 0 011 1v5a1 1 0 01-1 1H4a1 1 0 01-1-1V8a1 1 0 011-1h1V6z" />
+              </svg>
+              付费解锁
+            </span>
+          </div>
+
+          <h3 className="text-lg font-semibold text-center mb-2">
+            免费诊断告诉你问题在哪
+            <br />
+            <span className="text-[var(--accent)]">完整方案直接告诉你怎么改</span>
+          </h3>
+          <p className="text-sm text-[var(--text-secondary)] text-center mb-5">
+            {paidPreview.unlockReason}
           </p>
 
-          <div className="rounded-lg border border-[var(--border)] p-4 mb-3">
-            <p className="text-[11px] text-[var(--text-muted)] mb-1">原始标题</p>
-            <p className="text-sm text-[var(--text-secondary)] line-through">
-              {originalTitle}
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-emerald-200 dark:border-emerald-900/30 bg-emerald-50/50 dark:bg-emerald-950/10 p-4">
-            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mb-1">
-              优化建议 #1
-            </p>
-            <p className="text-sm font-semibold">
-              {freeOptimizations[0].title}
-            </p>
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">
-              {freeOptimizations[0].reasoning}
-            </p>
-          </div>
-
-          {/* Locked content block */}
-          <div className="mt-5 rounded-xl border border-dashed border-[var(--border)] bg-[var(--bg-alt)] p-5">
-            <div className="text-center mb-4">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)]/10 px-3 py-1 text-[11px] font-medium text-[var(--accent)]">
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M5 6a3 3 0 116 0v1h1a1 1 0 011 1v5a1 1 0 01-1 1H4a1 1 0 01-1-1V8a1 1 0 011-1h1V6z"/></svg>
-                付费解锁
-              </span>
-            </div>
-            <p className="text-sm font-semibold text-center mb-3">
-              解锁完整优化方案
-            </p>
-            <div className="grid grid-cols-2 gap-2 text-xs text-[var(--text-muted)]">
-              {[
-                `3版优化标题（含${productName}专属版本）`,
-                `5条核心卖点`,
-                "5张主图文案概念",
-                "详情页结构建议",
-                "用户顾虑FAQ解答",
-                "差异化卖点方向",
-              ].map((item) => (
-                <div key={item} className="flex items-center gap-1.5">
-                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="shrink-0"><path d="M3 8l3 3 7-7"/></svg>
-                  <span className="truncate">{item}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-5 flex flex-col sm:flex-row gap-2 justify-center">
-              <button
-                onClick={() => setPaywallOpen(true)}
-                className="rounded-xl bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--accent-dark)]"
-              >
-                9.9 元解锁完整方案
-              </button>
-              <button
-                onClick={() => setPaywallOpen(true)}
-                className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--bg-alt)]"
-              >
-                先免费体验一次
-              </button>
-            </div>
-            <p className="mt-3 text-center text-[11px] text-[var(--text-muted)]">
-              解锁后可在完整方案页查看所有内容
-            </p>
-          </div>
-        </Card>
-
-        {/* Pricing comparison */}
-        <Card className="p-8">
-          <h3 className="text-sm font-semibold mb-4">选择适合你的方案</h3>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {pricingPlans.map((plan) => (
-              <div
-                key={plan.name}
-                className={`rounded-xl border p-4 ${
-                  plan.highlighted
-                    ? "border-[var(--accent)] bg-[var(--accent)]/5"
-                    : plan.current
-                      ? "border-emerald-200 dark:border-emerald-900/30 bg-emerald-50/20 dark:bg-emerald-950/5"
-                      : "border-[var(--border)]"
-                }`}
-              >
-                {plan.highlighted && (
-                  <p className="mb-2 text-[10px] font-semibold text-[var(--accent)]">推荐</p>
-                )}
-                <p className="text-sm font-semibold">{plan.name}</p>
-                <p className="mt-1 text-2xl font-bold">
-                  ¥{plan.price}
-                  {plan.price !== "0" && (
-                    <span className="text-xs font-normal text-[var(--text-muted)]">/次</span>
-                  )}
-                </p>
-                <p className="mt-1 text-[11px] text-[var(--text-muted)]">{plan.description}</p>
-                <ul className="mt-3 space-y-1">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-1.5 text-[11px] text-[var(--text-secondary)]">
-                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="mt-0.5 shrink-0"><path d="M3 8l3 3 7-7"/></svg>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <button
-                  onClick={() => setPaywallOpen(true)}
-                  className={`mt-4 w-full rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
-                    plan.highlighted
-                      ? "bg-[var(--accent)] text-white hover:bg-[var(--accent-dark)]"
-                      : plan.current
-                        ? "bg-emerald-500 text-white"
-                        : "border border-[var(--border)] hover:bg-[var(--bg-alt)]"
-                  }`}
-                >
-                  {plan.price === "0" ? "当前方案" : "获取方案"}
-                </button>
+          <div className="grid grid-cols-2 gap-2 mb-6 text-xs">
+            {paidPreview.includedItems.map((item) => (
+              <div key={item} className="flex items-center gap-1.5">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="shrink-0 text-emerald-500">
+                  <path d="M3 8l3 3 7-7" />
+                </svg>
+                <span className="text-[var(--text-secondary)]">{item}</span>
               </div>
             ))}
           </div>
-        </Card>
 
-        {/* Bottom CTA */}
-        <div className="text-center py-6">
-          <p className="text-sm text-[var(--text-secondary)] mb-3">
-            已有 1,200+ 商家通过完整优化方案提升了商品转化
-          </p>
-          <button
-            onClick={() => setPaywallOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--accent-dark)]"
-          >
-            9.9 元解锁完整优化方案
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M6 4l4 4-4 4" />
-            </svg>
-          </button>
-          <p className="mt-3 text-xs text-[var(--text-muted)]">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={() => setPaywallOpen(true)}
+              className="rounded-xl bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-[var(--accent-dark)] hover:shadow-lg hover:shadow-[var(--accent)]/20"
+            >
+              9.9 元解锁完整方案
+            </button>
+            <Link
+              href="/diagnose"
+              className="rounded-xl border border-[var(--border)] px-6 py-3 text-sm font-medium text-center transition-colors hover:bg-[var(--bg-alt)]"
+            >
+              诊断另一个商品
+            </Link>
+          </div>
+          <p className="mt-4 text-center text-[11px] text-[var(--text-muted)]">
             不满意全额退款 · V0 验证版限时特惠
           </p>
-        </div>
+        </Card>
       </div>
 
       <PaywallModal open={paywallOpen} onClose={() => setPaywallOpen(false)} />

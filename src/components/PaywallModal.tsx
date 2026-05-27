@@ -35,11 +35,11 @@ export function PaywallModal({ open, onClose }: PaywallModalProps) {
               <path d="M12 2l2.4 7.2h7.6l-6 4.8 2.4 7.2-6.4-4.8-6.4 4.8 2.4-7.2-6-4.8h7.6z" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold mb-2">V0 内测阶段</h3>
+          <h3 className="text-lg font-semibold mb-2">V1 内测中</h3>
           <p className="text-sm text-[var(--text-secondary)] leading-relaxed mb-4">
-            暂未接入真实支付。本次可免费查看完整优化方案。
+            支付接口接入中。内测期间可免费查看完整方案。
             <br />
-            正式版预计按单商品 9.9 元收费。
+            正式版按单商品 9.9 元收费。
           </p>
 
           {/* Price acceptance survey */}

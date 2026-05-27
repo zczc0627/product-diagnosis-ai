@@ -66,13 +66,31 @@ export interface ProductInput {
   productName: string;
   category: string;
   platform: string;
+  price: string;
+  targetUser: string;
   currentTitle: string;
   currentSellingPoints: string;
   mainImageDescription: string;
   productDescription: string;
   competitorTitle?: string;
   competitorSellingPoints?: string;
+  userGoal: string;
 }
+
+// Re-export AI types for convenience
+export type {
+  AIDiagnoseRequest,
+  AIDiagnoseResponse,
+  AIScores,
+  AIProblem,
+  AIPaidPreview,
+  AIOptimizedTitle,
+  AICoreSellingPoint,
+  AIMainImageCopy,
+  AIDetailSection,
+  AIBuyerConcern,
+  AIPaidSolution,
+} from "./aiTypes";
 
 export interface HistoryItem {
   id: string;

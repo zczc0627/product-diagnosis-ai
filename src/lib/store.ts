@@ -55,28 +55,31 @@ export function loadFeedbacks(): FeedbackEntry[] {
   }
 }
 
-export function saveHistoryItem(item: {
+export interface HistoryEntry {
   id: string;
   productName: string;
   platform: string;
   score: number;
   date: string;
   isCompleted: boolean;
-}): void {
+  summary: string;
+  resultJson: string;
+}
+
+export function saveHistoryItem(item: HistoryEntry): void {
   if (typeof window === "undefined") return;
-  const existing = JSON.parse(localStorage.getItem("diagnosis_history") || "[]");
-  existing.unshift(item);
+  const existing = loadHistory();
+  // Replace existing entry with same id, or prepend new one
+  const idx = existing.findIndex((e) => e.id === item.id);
+  if (idx >= 0) {
+    existing[idx] = item;
+  } else {
+    existing.unshift(item);
+  }
   localStorage.setItem("diagnosis_history", JSON.stringify(existing.slice(0, 20)));
 }
 
-export function loadHistory(): Array<{
-  id: string;
-  productName: string;
-  platform: string;
-  score: number;
-  date: string;
-  isCompleted: boolean;
-}> {
+export function loadHistory(): HistoryEntry[] {
   if (typeof window === "undefined") return [];
   try {
     return JSON.parse(localStorage.getItem("diagnosis_history") || "[]");

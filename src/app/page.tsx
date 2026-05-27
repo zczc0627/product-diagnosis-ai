@@ -12,39 +12,41 @@ export default function HomePage() {
       <Section className="pb-0 sm:pb-0">
         <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
           <div className="max-w-xl">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--border)] px-3 py-1 text-xs text-[var(--text-secondary)]">
-              <span className="flex h-2 w-2 rounded-full bg-emerald-400" />
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--accent)]/20 bg-[var(--accent)]/5 px-3 py-1 text-xs text-[var(--accent)] font-medium">
+              <span className="flex h-2 w-2 rounded-full bg-[var(--accent)] animate-pulse" />
               AI 商品页转化诊断工具
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl leading-tight">
-              商品有流量没转化？
+              商品有人看，
+              <br className="sm:hidden" />
+              却没人下单？
               <br />
-              <span className="text-[var(--accent)]">AI 帮你找出影响点击和下单的问题</span>
+              <span className="text-[var(--accent)]">AI 帮你的商品页把流量变销量</span>
             </h1>
             <p className="mt-5 text-base sm:text-lg text-[var(--text-secondary)] leading-relaxed">
-              输入商品标题、卖点和主图文案，
+              输入商品标题、卖点和主图文案，让 AI 找出影响点击和成交的问题，
               <br className="hidden sm:block" />
-              AI 自动诊断商品页转化问题，并生成可直接用于商品页的优化方案。
+              并生成可直接复制的优化方案。帮你把参数卖点改成买家愿意买单的表达。
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="/diagnose"
-                className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--accent-dark)]"
+                className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-6 py-3.5 text-sm font-semibold text-white transition-all hover:bg-[var(--accent-dark)] hover:shadow-lg hover:shadow-[var(--accent)]/20"
               >
-                免费诊断我的商品页
+                免费诊断我的商品
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M6 4l4 4-4 4" />
                 </svg>
               </Link>
               <Link
-                href="#cases"
-                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] px-5 py-3 text-sm font-medium transition-colors hover:bg-[var(--bg-alt)]"
+                href="#pricing"
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] px-5 py-3.5 text-sm font-medium transition-colors hover:bg-[var(--bg-alt)]"
               >
-                看优化前后对比
+                查看定价
               </Link>
             </div>
             <p className="mt-4 text-xs text-[var(--text-muted)]">
-              免费诊断，无需注册，30 秒出结果。完整优化方案 V0 内测价 9.9 元。
+              无需注册，30 秒生成基础诊断。完整方案 V1 内测价 9.9 元。
             </p>
           </div>
 
@@ -267,11 +269,11 @@ export default function HomePage() {
       </Section>
 
       {/* ─── Pricing ─── */}
-      <Section>
+      <Section id="pricing">
         <SectionHeader
           label="定价"
-          title="简单的定价，清晰的价值"
-          description="从免费诊断开始，需要完整方案再付费。"
+          title="先免费看问题，觉得有价值再付费"
+          description="免费诊断告诉你问题在哪，完整方案告诉你怎么改。"
           center
         />
         <div className="mx-auto max-w-3xl grid gap-4 sm:grid-cols-3">
@@ -280,25 +282,27 @@ export default function HomePage() {
               name: "免费诊断",
               price: "0",
               desc: "了解你的商品页问题在哪",
-              features: ["综合评分", "5维度评分", "3个核心问题", "1条优化建议"],
+              features: ["综合评分", "6维度评分", "3个核心问题", "1条关键建议"],
               btn: "免费开始",
               highlighted: false,
             },
             {
               name: "单商品完整优化",
               price: "9.9",
-              desc: "一个商品的全套方案",
-              features: ["3版优化标题", "5条核心卖点", "5张主图方案", "详情页结构", "用户FAQ", "差异化方向"],
+              desc: "一个商品的全套优化方案",
+              features: ["3版可直接用的标题", "5条买家语言卖点", "5条主图文案+画面建议", "详情页结构", "买家顾虑FAQ", "差异化成交话术"],
               btn: "9.9元获取方案",
               highlighted: true,
+              perUse: true,
             },
             {
-              name: "早鸟5次包",
+              name: "早鸟 5 次包",
               price: "39",
               desc: "适合有多个商品的商家",
               features: ["5次完整优化", "同单商品全部内容", "优先体验新功能", "早鸟专属优惠"],
-              btn: "39元获取方案",
+              btn: "39元 / 5次",
               highlighted: false,
+              subPrice: "单次低至 ¥7.8",
             },
           ].map((plan) => (
             <Card
@@ -315,12 +319,16 @@ export default function HomePage() {
               <p className="text-sm font-semibold">{plan.name}</p>
               <p className="mt-2 text-3xl font-bold tracking-tight">
                 ¥{plan.price}
-                {plan.price !== "0" && (
-                  <span className="text-xs font-normal text-[var(--text-muted)]">
-                    /次
-                  </span>
+                {plan.perUse && (
+                  <span className="text-xs font-normal text-[var(--text-muted)]">/次</span>
                 )}
               </p>
+              {plan.subPrice && (
+                <p className="text-[11px] text-emerald-500 font-medium mt-0.5">{plan.subPrice}</p>
+              )}
+              {!plan.subPrice && plan.price !== "0" && (
+                <p className="text-[11px] text-emerald-500 font-medium mt-0.5">&nbsp;</p>
+              )}
               <p className="mt-1 text-xs text-[var(--text-muted)]">{plan.desc}</p>
               <ul className="mt-4 space-y-1.5 text-left">
                 {plan.features.map((f) => (
@@ -354,21 +362,21 @@ export default function HomePage() {
             商品卖不动，可能不是流量的问题
           </h2>
           <p className="mt-3 text-[var(--text-secondary)] leading-relaxed">
-            让 AI 帮你看清问题，生成能真正打动用户的商品文案。
+            让 AI 帮你看清问题，生成能真正打动用户、提高成交意愿的商品文案。
           </p>
           <div className="mt-8">
             <Link
               href="/diagnose"
-              className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-6 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--accent-dark)]"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-6 py-3.5 text-sm font-semibold text-white transition-all hover:bg-[var(--accent-dark)] hover:shadow-lg hover:shadow-[var(--accent)]/20"
             >
-              免费诊断我的商品页
+              免费诊断我的商品
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M6 4l4 4-4 4" />
               </svg>
             </Link>
           </div>
           <p className="mt-4 text-xs text-[var(--text-muted)]">
-            免费诊断，无需注册，30 秒出结果。完整优化方案 V0 内测价 9.9 元。
+            无需注册。免费诊断告诉你问题在哪，9.9 元完整方案告诉你怎么改。
           </p>
         </div>
       </Section>
