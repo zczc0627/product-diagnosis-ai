@@ -25,21 +25,21 @@ export function PaywallModal({ open, onClose }: PaywallModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative w-full max-w-sm rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] p-6 shadow-2xl">
+      <div className="relative w-full max-w-sm rounded-2xl bg-[var(--bg-card)] border border-[var(--gold)]/30 p-6 shadow-2xl shadow-[var(--gold-glow)] premium-card">
         <div className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--accent)]/10">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--accent)]">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--gold)]/10">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--gold)]">
               <path d="M12 2l2.4 7.2h7.6l-6 4.8 2.4 7.2-6.4-4.8-6.4 4.8 2.4-7.2-6-4.8h7.6z" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold mb-2">V1 内测中</h3>
+          <h3 className="text-lg font-semibold mb-2">解锁完整优化方案</h3>
           <p className="text-sm text-[var(--text-secondary)] leading-relaxed mb-4">
-            支付接口接入中。内测期间可免费查看完整方案。
+            免费诊断让你看清问题，完整方案直接告诉你怎么改。
             <br />
-            正式版按单商品 9.9 元收费。
+            <span className="text-[var(--gold-light)] font-medium">V1 内测价 9.9 元/次</span>，支付接口接入中，限时免费体验。
           </p>
 
           {/* Price acceptance survey */}
@@ -70,7 +70,7 @@ export function PaywallModal({ open, onClose }: PaywallModalProps) {
 
           <button
             onClick={handleFreeAccess}
-            className="w-full rounded-xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--accent-dark)]"
+            className="btn-glow w-full rounded-xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--accent-dark)]"
           >
             免费查看完整方案
           </button>
@@ -80,6 +80,9 @@ export function PaywallModal({ open, onClose }: PaywallModalProps) {
           >
             先看看再说
           </button>
+          <p className="mt-3 text-[10px] text-[var(--text-muted)]">
+            不满意全额退款 · 每个商品限免一次
+          </p>
         </div>
       </div>
     </div>

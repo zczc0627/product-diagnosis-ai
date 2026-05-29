@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { Section, SectionHeader } from "@/components/Section";
 import { Card } from "@/components/Card";
 import { saveFormData, saveHistoryItem } from "@/lib/store";
@@ -257,7 +258,12 @@ export default function DiagnosePage() {
         description="信息越详细，AI 诊断越精准。必填项不多，大约 1 分钟完成。"
       />
 
-      <div className="mx-auto max-w-2xl">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="mx-auto max-w-2xl"
+      >
         <Card className="p-6 sm:p-8">
           <div className="space-y-5">
             {/* Row 1: Product Name + Category */}
@@ -448,7 +454,7 @@ export default function DiagnosePage() {
             </p>
           </div>
         </Card>
-      </div>
+      </motion.div>
     </Section>
   );
 }

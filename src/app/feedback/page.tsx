@@ -2,8 +2,14 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { Section, SectionHeader } from "@/components/Section";
 import { Card } from "@/components/Card";
+
+const stagger = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+};
 interface FeedbackEntry {
   id: string;
   productName: string;
@@ -191,55 +197,39 @@ export default function FeedbackPage() {
           <>
             {/* Stats */}
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <Card className="p-5">
-                <p className="text-[11px] text-[var(--text-muted)]">总反馈数</p>
-                <p className="mt-1 text-2xl font-bold">{stats.total}</p>
-              </Card>
-              <Card className="p-5">
-                <p className="text-[11px] text-[var(--text-muted)]">愿意接受 9.9 元</p>
-                <p className="mt-1 text-2xl font-bold">
-                  {stats.acceptPrice}
-                  <span className="ml-1.5 text-sm font-normal text-[var(--text-muted)]">
-                    {stats.acceptPriceRate}%
-                  </span>
-                </p>
-                <div className="mt-2 h-1 w-full rounded-full bg-[var(--border)]">
-                  <div
-                    className="h-full rounded-full bg-emerald-400 transition-all"
-                    style={{ width: `${stats.acceptPriceRate}%` }}
-                  />
-                </div>
-              </Card>
-              <Card className="p-5">
-                <p className="text-[11px] text-[var(--text-muted)]">留下联系方式</p>
-                <p className="mt-1 text-2xl font-bold">
-                  {stats.hasContact}
-                  <span className="ml-1.5 text-sm font-normal text-[var(--text-muted)]">
-                    {stats.hasContactRate}%
-                  </span>
-                </p>
-                <div className="mt-2 h-1 w-full rounded-full bg-[var(--border)]">
-                  <div
-                    className="h-full rounded-full bg-blue-400 transition-all"
-                    style={{ width: `${stats.hasContactRate}%` }}
-                  />
-                </div>
-              </Card>
-              <Card className="p-5">
-                <p className="text-[11px] text-[var(--text-muted)]">觉得有帮助</p>
-                <p className="mt-1 text-2xl font-bold">
-                  {stats.foundHelpful}
-                  <span className="ml-1.5 text-sm font-normal text-[var(--text-muted)]">
-                    {stats.foundHelpfulRate}%
-                  </span>
-                </p>
-                <div className="mt-2 h-1 w-full rounded-full bg-[var(--border)]">
-                  <div
-                    className="h-full rounded-full bg-[var(--accent)] transition-all"
-                    style={{ width: `${stats.foundHelpfulRate}%` }}
-                  />
-                </div>
-              </Card>
+              {[
+                { label: "总反馈数", value: stats.total, color: "", rate: null },
+                { label: "愿意接受 9.9 元", value: stats.acceptPrice, rate: stats.acceptPriceRate, color: "bg-emerald-400" },
+                { label: "留下联系方式", value: stats.hasContact, rate: stats.hasContactRate, color: "bg-blue-400" },
+                { label: "觉得有帮助", value: stats.foundHelpful, rate: stats.foundHelpfulRate, color: "bg-[var(--accent)]" },
+              ].map((stat, i) => (
+                <motion.div
+                  key={stat.label}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: i * 0.08 }}
+                >
+                  <Card className="p-5">
+                    <p className="text-[11px] text-[var(--text-muted)]">{stat.label}</p>
+                    <p className="mt-1 text-2xl font-bold">
+                      {stat.value}
+                      {stat.rate !== null && (
+                        <span className="ml-1.5 text-sm font-normal text-[var(--text-muted)]">
+                          {stat.rate}%
+                        </span>
+                      )}
+                    </p>
+                    {stat.color && (
+                      <div className="mt-2 h-1 w-full rounded-full bg-[var(--border)]">
+                        <div
+                          className={`h-full rounded-full ${stat.color} transition-all`}
+                          style={{ width: `${stat.rate}%` }}
+                        />
+                      </div>
+                    )}
+                  </Card>
+                </motion.div>
+              ))}
             </div>
 
             {/* Filters + Export */}
@@ -302,8 +292,13 @@ export default function FeedbackPage() {
               </Card>
             ) : (
               <div className="space-y-3">
-                {filtered.map((f) => (
-                  <Card key={f.id} className="p-5">
+                {filtered.map((f, i) => (
+                  <motion.div
+                    key={f.id}
+                    {...stagger}
+                    transition={{ duration: 0.4, delay: i * 0.05 }}
+                  >
+                  <Card className="p-5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
@@ -359,6 +354,7 @@ export default function FeedbackPage() {
                       </div>
                     </div>
                   </Card>
+                  </motion.div>
                 ))}
               </div>
             )}
